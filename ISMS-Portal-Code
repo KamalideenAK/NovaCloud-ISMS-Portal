@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NovaCloud AI | ISMS Policy Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* Custom Scrollbar for cleaner look */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            height: 300px;
+            margin: 0 auto;
+        }
+        /* Transition utility */
+        .fade-in {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+    <!-- Chosen Palette: Warm Neutrals & Corporate Blue -->
+    <!-- Application Structure Plan: 
+         The app is designed as an "Employee Policy Dashboard" rather than a linear document.
+         1. Dashboard Home: High-level summary, Scope visualization, and Objectives chart.
+         2. Governance Center: Interactive Role-based view. Users click a role to see responsibilities.
+         3. Control Matrix: The core policy statements (5.1-5.4) presented as an interactive grid/tab system to reduce cognitive load.
+         4. Action Center: Incident reporting and enforcement, focused on "What do I do?".
+         Why: Compliance documents are often ignored because they are dense. This structure encourages exploration and quick lookups.
+    -->
+    <!-- Visualization & Content Choices:
+         1. Objectives Breakdown -> Goal: Show balance of security goals -> Viz: Donut Chart -> Interaction: Hover for details -> Justification: Visualizes the "Why" (CIA Triad).
+         2. Scope Map -> Goal: Define Physical vs Logical boundaries -> Viz: Interactive Toggles -> Interaction: Click to toggle visibility of details -> Justification: Clarifies where policy applies.
+         3. Roles Filter -> Goal: Personalize the policy -> Viz: Button Group -> Interaction: Filter content based on selected role -> Justification: Users care most about what *they* need to do.
+         4. Control Cards -> Goal: Detail specific rules -> Viz: Grid of interactive cards -> Interaction: Click to expand/show details -> Justification: Breaks dense text into digestible chunks.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+</head>
+<body class="bg-stone-50 text-stone-800 font-sans antialiased min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="bg-white shadow-sm sticky top-0 z-50 border-b border-stone-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="h-8 w-8 bg-sky-600 rounded flex items-center justify-center text-white font-bold text-lg">N</div>
+                <h1 class="text-xl font-semibold tracking-tight text-stone-900">NovaCloud AI <span class="text-stone-500 font-normal">| Policy Portal</span></h1>
+            </div>
+            <div class="flex items-center space-x-4">
+                <span class="px-3 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">v1.0 Active</span>
+                <span class="text-sm text-stone-500 hidden sm:block">Effective: 2023-10-27</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Navigation (Tabs) -->
+    <nav class="bg-stone-100 border-b border-stone-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex space-x-8 -mb-px overflow-x-auto" id="nav-container">
+                <!-- Navigation items injected by JS -->
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main id="app-content" class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+        <!-- Views injected by JS -->
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-stone-200 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col md:flex-row justify-between items-center text-sm text-stone-500">
+            <p>&copy; 2023 NovaCloud AI Solutions. Internal Use Only.</p>
+            <p>Approver: Jane Doe, CEO</p>
+        </div>
+    </footer>
+
+    <script>
+        // --- DATA STORE ---
+        const policyData = {
+            metadata: {
+                title: "Information Security Policy (ISP)",
+                version: "1.0",
+                approver: "CEO",
+                date: "2023-10-27"
+            },
+            objectives: [
+                { label: "Protect IP", value: 33, desc: "Safeguarding AI algorithms & models", color: '#0284c7' },
+                { label: "Ensure Trust", value: 33, desc: "Securing customer training data", color: '#0ea5e9' },
+                { label: "Maintain Uptime", value: 34, desc: "99.9% Availability Target", color: '#38bdf8' }
+            ],
+            scope: {
+                physical: ["SF Headquarters", "Remote Workspaces"],
+                logical: ["AWS Production Environment", "GitHub Repositories", "Corporate SaaS (Google, Slack, Jira)"]
+            },
+            roles: [
+                { 
+                    id: 'ceo', 
+                    title: 'CEO', 
+                    icon: '👑', 
+                    responsibilities: ['Ultimate accountability for ISMS', 'Security budget approval', 'Policy sign-off'] 
+                },
+                { 
+                    id: 'tech', 
+                    title: 'CTO / CISO', 
+                    icon: '🛡️', 
+                    responsibilities: ['Operational responsibility', 'Implementing technical controls', 'Quarterly access reviews'] 
+                },
+                { 
+                    id: 'all', 
+                    title: 'All Employees', 
+                    icon: '👥', 
+                    responsibilities: ['Adhere to policy', 'Report incidents immediately', 'Lock screens', 'Inventory devices'] 
+                }
+            ],
+            controls: [
+                {
+                    id: '5.1',
+                    title: 'Access Control',
+                    icon: '🔐',
+                    summary: 'Need-to-Know & Least Privilege',
+                    details: [
+                        { label: 'MFA', text: 'Multi-Factor Authentication is mandatory for all SaaS and Infrastructure accounts (AWS, Google, GitHub).' },
+                        { label: 'Reviews', text: 'Access rights are reviewed quarterly by the CTO.' }
+                    ]
+                },
+                {
+                    id: '5.2',
+                    title: 'Asset Management',
+                    icon: '💻',
+                    summary: 'Inventory & Classification',
+                    details: [
+                        { label: 'Devices', text: 'Only company-managed laptops (MDM) may access production. BYOD is restricted.' },
+                        { label: 'Data Class', text: 'Data must be classified as Public, Internal, or Confidential.' }
+                    ]
+                },
+                {
+                    id: '5.3',
+                    title: 'Acceptable Use',
+                    icon: '✅',
+                    summary: 'Daily Hygiene & Shadow IT',
+                    details: [
+                        { label: 'Screen Lock', text: 'Employees must lock screens when leaving desks or remote stations.' },
+                        { label: 'Shadow IT', text: 'Unauthorized SaaS usage is strictly prohibited.' }
+                    ]
+                },
+                {
+                    id: '5.4',
+                    title: 'Data Protection',
+                    icon: '🛡️',
+                    summary: 'Encryption & AI Safety',
+                    details: [
+                        { label: 'Encryption', text: 'Full-disk encryption on laptops. AES-256 for data at rest in AWS.' },
+                        { label: 'AI Safety', text: 'Customer data must be isolated. Never use customer data to train base models without consent.' }
+                    ]
+                }
+            ],
+            incident: {
+                email: "security@novacloud.ai",
+                triggers: ["Lost laptop", "Phishing suspicion", "API key exposure"],
+                enforcement: "Violation may result in disciplinary action up to termination and legal action."
+            }
+        };
+
+        // --- STATE MANAGEMENT ---
+        let state = {
+            currentView: 'dashboard', // dashboard, governance, controls, action
+            activeRole: 'all',
+            activeControl: '5.1'
+        };
+
+        // --- DOM ELEMENTS ---
+        const navContainer = document.getElementById('nav-container');
+        const appContent = document.getElementById('app-content');
+
+        // --- NAVIGATION LOGIC ---
+        const views = [
+            { id: 'dashboard', label: 'Overview & Objectives' },
+            { id: 'governance', label: 'Roles & Responsibilities' },
+            { id: 'controls', label: 'Policy Controls' },
+            { id: 'action', label: 'Incident & Action' }
+        ];
+
+        function renderNav() {
+            navContainer.innerHTML = views.map(view => `
+                <button 
+                    onclick="switchView('${view.id}')"
+                    class="${state.currentView === view.id 
+                        ? 'border-sky-500 text-sky-600' 
+                        : 'border-transparent text-stone-500 hover:text-stone-700 hover:border-stone-300'} 
+                        whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-200"
+                >
+                    ${view.label}
+                </button>
+            `).join('');
+        }
+
+        function switchView(viewId) {
+            state.currentView = viewId;
+            renderNav();
+            renderContent();
+        }
+
+        // --- CONTENT RENDERING ---
+
+        function renderContent() {
+            appContent.innerHTML = ''; // Clear current
+            appContent.classList.remove('fade-in');
+            void appContent.offsetWidth; // Trigger reflow
+            appContent.classList.add('fade-in');
+
+            switch (state.currentView) {
+                case 'dashboard':
+                    renderDashboard();
+                    break;
+                case 'governance':
+                    renderGovernance();
+                    break;
+                case 'controls':
+                    renderControls();
+                    break;
+                case 'action':
+                    renderAction();
+                    break;
+            }
+        }
+
+        // VIEW 1: DASHBOARD
+        function renderDashboard() {
+            const container = document.createElement('div');
+            container.className = 'grid grid-cols-1 lg:grid-cols-2 gap-8';
+
+            container.innerHTML = `
+                <!-- Intro Section -->
+                <div class="col-span-1 lg:col-span-2 bg-white p-6 rounded-lg shadow-sm border border-stone-200">
+                    <h2 class="text-2xl font-bold text-stone-800 mb-2">Welcome to the ISMS Portal</h2>
+                    <p class="text-stone-600 leading-relaxed">
+                        This portal governs the protection of NovaCloud AI Solutions' information assets. 
+                        Our goal is to ensure the <strong>Confidentiality, Integrity, and Availability (CIA)</strong> 
+                        of our proprietary algorithms and our customers' sensitive training data. 
+                        Compliance with these policies is mandatory for all staff.
+                    </p>
+                </div>
+
+                <!-- Scope Section -->
+                <div class="bg-white p-6 rounded-lg shadow-sm border border-stone-200 flex flex-col">
+                    <h3 class="text-lg font-semibold text-stone-800 mb-4 flex items-center">
+                        <span class="bg-sky-100 text-sky-800 p-1 rounded mr-2">📍</span> Operational Scope
+                    </h3>
+                    <p class="text-sm text-stone-500 mb-4">The policy applies to the following environments:</p>
+                    
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 flex-grow">
+                        <div class="bg-stone-50 p-4 rounded border border-stone-100">
+                            <h4 class="font-bold text-stone-700 mb-2 text-sm uppercase tracking-wide">Physical</h4>
+                            <ul class="space-y-2">
+                                ${policyData.scope.physical.map(item => `
+                                    <li class="flex items-start text-sm text-stone-600">
+                                        <span class="mr-2 text-sky-500">•</span> ${item}
+                                    </li>
+                                `).join('')}
+                            </ul>
+                        </div>
+                        <div class="bg-stone-50 p-4 rounded border border-stone-100">
+                            <h4 class="font-bold text-stone-700 mb-2 text-sm uppercase tracking-wide">Logical</h4>
+                            <ul class="space-y-2">
+                                ${policyData.scope.logical.map(item => `
+                                    <li class="flex items-start text-sm text-stone-600">
+                                        <span class="mr-2 text-sky-500">•</span> ${item}
+                                    </li>
+                                `).join('')}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Strategic Objectives Chart -->
+                <div class="bg-white p-6 rounded-lg shadow-sm border border-stone-200 flex flex-col items-center">
+                    <h3 class="text-lg font-semibold text-stone-800 mb-2 w-full text-left flex items-center">
+                        <span class="bg-sky-100 text-sky-800 p-1 rounded mr-2">🎯</span> Security Objectives
+                    </h3>
+                    <p class="text-sm text-stone-500 mb-4 w-full text-left">Our ISMS is built on three pillars.</p>
+                    <div class="chart-container">
+                        <canvas id="objectivesChart"></canvas>
+                    </div>
+                </div>
+            `;
+            
+            appContent.appendChild(container);
+            
+            // Render Chart
+            const ctx = document.getElementById('objectivesChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: policyData.objectives.map(o => o.label),
+                    datasets: [{
+                        data: policyData.objectives.map(o => o.value),
+                        backgroundColor: policyData.objectives.map(o => o.color),
+                        borderWidth: 0,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { usePointStyle: true, padding: 20 }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const index = context.dataIndex;
+                                    return ` ${policyData.objectives[index].desc}`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // VIEW 2: GOVERNANCE
+        function renderGovernance() {
+            const container = document.createElement('div');
+            container.className = 'space-y-6';
+
+            // Role Selector
+            const selectorHTML = `
+                <div class="bg-white p-6 rounded-lg shadow-sm border border-stone-200">
+                     <h2 class="text-2xl font-bold text-stone-800 mb-4">Roles & Responsibilities</h2>
+                     <p class="text-stone-600 mb-6">Select a role to view specific accountabilities within the ISMS.</p>
+                     
+                     <div class="flex flex-wrap gap-4">
+                        ${policyData.roles.map(role => `
+                            <button 
+                                onclick="updateRole('${role.id}')"
+                                class="flex items-center space-x-2 px-6 py-3 rounded-lg border transition-all duration-200 ${state.activeRole === role.id ? 'bg-sky-50 border-sky-500 text-sky-700 shadow-sm' : 'bg-white border-stone-200 text-stone-600 hover:bg-stone-50'}"
+                            >
+                                <span class="text-xl">${role.icon}</span>
+                                <span class="font-medium">${role.title}</span>
+                            </button>
+                        `).join('')}
+                     </div>
+                </div>
+            `;
+
+            // Dynamic Responsibility Area
+            const activeRoleData = policyData.roles.find(r => r.id === state.activeRole);
+            const contentHTML = `
+                <div class="bg-white p-8 rounded-lg shadow-sm border border-stone-200 mt-6 border-l-4 border-l-sky-500 fade-in">
+                    <div class="flex items-center mb-6">
+                        <span class="text-4xl mr-4">${activeRoleData.icon}</span>
+                        <div>
+                            <h3 class="text-xl font-bold text-stone-900">${activeRoleData.title}</h3>
+                            <p class="text-stone-500 text-sm">Designated Responsibilities</p>
+                        </div>
+                    </div>
+                    <ul class="space-y-4">
+                        ${activeRoleData.responsibilities.map(item => `
+                            <li class="flex items-start">
+                                <span class="flex-shrink-0 h-6 w-6 rounded-full bg-green-100 text-green-600 flex items-center justify-center text-xs mr-3 mt-0.5">✓</span>
+                                <span class="text-stone-700 text-lg">${item}</span>
+                            </li>
+                        `).join('')}
+                    </ul>
+                </div>
+            `;
+
+            container.innerHTML = selectorHTML + '<div id="role-content">' + contentHTML + '</div>';
+            appContent.appendChild(container);
+        }
+
+        function updateRole(roleId) {
+            state.activeRole = roleId;
+            renderGovernance(); // Re-render to update UI
+        }
+
+        // VIEW 3: CONTROLS
+        function renderControls() {
+            const container = document.createElement('div');
+            container.className = 'grid grid-cols-1 lg:grid-cols-12 gap-8';
+
+            // Intro
+            const intro = `
+                <div class="lg:col-span-12 mb-4">
+                    <h2 class="text-2xl font-bold text-stone-800">Core Policy Controls</h2>
+                    <p class="text-stone-600 mt-2">
+                        These are the mandatory rules for Access, Assets, Usage, and Data Protection. 
+                        Click a category to view detailed requirements.
+                    </p>
+                </div>
+            `;
+
+            // Sidebar Navigation for Controls
+            const sidebar = `
+                <div class="lg:col-span-4 space-y-3">
+                    ${policyData.controls.map(control => `
+                        <button 
+                            onclick="updateControl('${control.id}')"
+                            class="w-full text-left p-4 rounded-lg border transition-all duration-200 flex items-center justify-between group ${state.activeControl === control.id ? 'bg-sky-600 border-sky-600 text-white shadow-md' : 'bg-white border-stone-200 text-stone-600 hover:border-sky-300 hover:bg-sky-50'}"
+                        >
+                            <div class="flex items-center">
+                                <span class="mr-3 text-xl opacity-90">${control.icon}</span>
+                                <div>
+                                    <span class="block font-bold text-sm opacity-75">Policy ${control.id}</span>
+                                    <span class="block font-semibold">${control.title}</span>
+                                </div>
+                            </div>
+                            <span class="${state.activeControl === control.id ? 'text-white' : 'text-stone-400'}">→</span>
+                        </button>
+                    `).join('')}
+                </div>
+            `;
+
+            // Detail View
+            const activeControlData = policyData.controls.find(c => c.id === state.activeControl);
+            const detailView = `
+                <div class="lg:col-span-8">
+                    <div class="bg-white rounded-lg shadow-sm border border-stone-200 h-full p-8 fade-in relative overflow-hidden">
+                        <div class="absolute top-0 right-0 p-4 opacity-5">
+                            <span class="text-9xl">${activeControlData.icon}</span>
+                        </div>
+                        
+                        <div class="border-b border-stone-100 pb-4 mb-6">
+                            <h3 class="text-2xl font-bold text-stone-900 flex items-center">
+                                <span class="text-sky-600 mr-2">${activeControlData.id}</span> ${activeControlData.title}
+                            </h3>
+                            <p class="text-stone-500 text-lg mt-1">${activeControlData.summary}</p>
+                        </div>
+
+                        <div class="space-y-6">
+                            ${activeControlData.details.map(detail => `
+                                <div class="bg-stone-50 p-5 rounded border border-stone-100">
+                                    <h4 class="font-bold text-stone-800 text-sm uppercase tracking-wider mb-2 text-sky-700">${detail.label}</h4>
+                                    <p class="text-stone-700 leading-relaxed">${detail.text}</p>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            container.innerHTML = intro + sidebar + detailView;
+            appContent.appendChild(container);
+        }
+
+        function updateControl(id) {
+            state.activeControl = id;
+            renderControls();
+        }
+
+        // VIEW 4: ACTION CENTER
+        function renderAction() {
+            const container = document.createElement('div');
+            container.className = 'max-w-3xl mx-auto space-y-8';
+
+            container.innerHTML = `
+                <div class="text-center mb-8">
+                    <h2 class="text-3xl font-bold text-stone-900">Incident Response</h2>
+                    <p class="text-stone-600 mt-2 text-lg">See something? Say something. Security is everyone's job.</p>
+                </div>
+
+                <!-- Emergency Card -->
+                <div class="bg-red-50 border-2 border-red-100 rounded-xl p-8 text-center shadow-sm">
+                    <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">🚨</div>
+                    <h3 class="text-xl font-bold text-red-800 mb-2">Report a Security Incident</h3>
+                    <p class="text-red-700 mb-6">If you suspect a breach, lost laptop, or phishing attempt, contact the team immediately.</p>
+                    
+                    <div class="bg-white inline-block px-8 py-4 rounded-lg shadow-sm border border-red-200">
+                        <span class="block text-xs text-stone-400 font-bold uppercase tracking-wider mb-1">Email To</span>
+                        <a href="mailto:${policyData.incident.email}" class="text-2xl font-bold text-stone-900 hover:text-red-600 transition-colors">
+                            ${policyData.incident.email}
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Trigger List -->
+                <div class="bg-white rounded-lg shadow-sm border border-stone-200 p-6">
+                    <h3 class="text-lg font-bold text-stone-800 mb-4 border-b pb-2">Mandatory Reporting Triggers</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        ${policyData.incident.triggers.map((trigger, idx) => `
+                            <div class="flex items-center p-3 bg-stone-50 rounded border border-stone-100">
+                                <span class="w-6 h-6 rounded-full bg-stone-200 text-stone-600 flex items-center justify-center text-xs font-bold mr-3">${idx + 1}</span>
+                                <span class="text-stone-700 font-medium">${trigger}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+
+                <!-- Enforcement -->
+                <div class="bg-stone-800 text-stone-300 rounded-lg p-6 text-sm flex items-start">
+                    <span class="text-2xl mr-4">⚖️</span>
+                    <div>
+                        <strong class="text-white block mb-1 uppercase tracking-wide">Enforcement Policy</strong>
+                        ${policyData.incident.enforcement}
+                    </div>
+                </div>
+            `;
+            
+            appContent.appendChild(container);
+        }
+
+        // --- INITIALIZATION ---
+        // Load default view on start
+        renderNav();
+        renderContent();
+
+    </script>
+</body>
+</html>
